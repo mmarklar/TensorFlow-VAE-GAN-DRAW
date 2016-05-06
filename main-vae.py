@@ -132,6 +132,8 @@ if __name__ == "__main__":
     train = pt.apply_optimizer(optimizer, losses=[loss])
 
     init = tf.initialize_all_variables()
+    
+    saver = tf.train.Saver()
 
     with tf.Session() as sess:
         sess.run(init)
@@ -161,3 +163,9 @@ if __name__ == "__main__":
 
                 imsave(os.path.join(imgs_folder, '%d.png') % k,
                        imgs[k].reshape(28, 28))
+                    
+        save_path = os.path.join(FLAGS.working_directory, 'save')
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        saver.save(sess, save_path)
+        print("Model saved to %s" % save_path)
