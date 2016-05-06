@@ -20,7 +20,7 @@ logging = tf.logging
 
 flags.DEFINE_integer("batch_size", 128, "batch size")
 flags.DEFINE_integer("updates_per_epoch", 1000, "number of updates per epoch")
-flags.DEFINE_integer("max_epoch", 100, "max epoch")
+flags.DEFINE_integer("max_epoch", 1, "max epoch")
 flags.DEFINE_float("learning_rate", 1e-2, "learning rate")
 flags.DEFINE_string("working_directory", "", "")
 flags.DEFINE_integer("hidden_size", 10, "size of the hidden VAE unit")
@@ -142,7 +142,7 @@ if __name__ == "__main__":
             training_loss = 0.0
 
             widgets = ["epoch #%d|" % epoch, Percentage(), Bar(), ETA()]
-            pbar = ProgressBar(max_val = FLAGS.updates_per_epoch, widgets=widgets)
+            pbar = ProgressBar(maxval = FLAGS.updates_per_epoch, widgets=widgets)
             pbar.start()
             for i in range(FLAGS.updates_per_epoch):
                 pbar.update(i)
@@ -164,8 +164,8 @@ if __name__ == "__main__":
                 imsave(os.path.join(imgs_folder, '%d.png') % k,
                        imgs[k].reshape(28, 28))
                     
-        save_path = os.path.join(FLAGS.working_directory, 'save')
+        save_path = os.path.join(FLAGS.working_directory, 'save.ckpt')
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        saver.save(sess, save_path)
+        save_path = saver.save(sess, '/tmp/save.ckpt')
         print("Model saved to %s" % save_path)
