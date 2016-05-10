@@ -1,5 +1,6 @@
 import math
 import os
+import collections
 
 import numpy as np
 import prettytensor as pt
@@ -7,6 +8,7 @@ import scipy.misc
 import tensorflow as tf
 from scipy.misc import imsave
 from tensorflow.examples.tutorials.mnist import input_data
+from tensorflow.contrib.learn.python.learn.datasets import mnist
 
 from deconv import deconv2d
 from progressbar import ETA, Bar, Percentage, ProgressBar
@@ -14,14 +16,16 @@ from progressbar import ETA, Bar, Percentage, ProgressBar
 flags = tf.flags
 logging = tf.logging
 
-flags.DEFINE_integer("batch_size", 128, "batch size")
-flags.DEFINE_integer("updates_per_epoch", 1000, "number of updates per epoch")
+flags.DEFINE_integer("batch_size", 32, "batch size")
+flags.DEFINE_integer("updates_per_epoch", 200, "number of updates per epoch")
 flags.DEFINE_integer("max_epoch", 1, "max epoch")
 flags.DEFINE_float("learning_rate", 1e-2, "learning rate")
 flags.DEFINE_string("working_directory", "", "")
 flags.DEFINE_integer("hidden_size", 10, "size of the hidden VAE unit")
 
 FLAGS = flags.FLAGS
+
+Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
 
 def encoder(input_tensor):
     '''Create encoder network.
@@ -97,13 +101,35 @@ def get_reconstruction_cost(output_tensor, target_tensor, epsilon=1e-8):
     return tf.reduce_sum(-target_tensor * tf.log(output_tensor + epsilon) -
                          (1.0 - target_tensor) * tf.log(1.0 - output_tensor + epsilon))
 
+def read_data_set(filename):
+    VALIDATION_SIZE=99
+    TEST_SIZE = 1000
+    EXAMPLE_COUNT = 8523
+    SIZE = 784
+
+    data = np.load(filename)
+    print data.shape
+    # This is hardcoded for now but needs to change
+    data = data.reshape(EXAMPLE_COUNT, SIZE)
+    validation_classes = data[:VALIDATION_SIZE]
+    train_classes = data[VALIDATION_SIZE:-TEST_SIZE]
+    test_classes = data[-TEST_SIZE:]
+    print validation_classes.shape
+    print train_classes.shape
+    print test_classes.shape
+
+    validation = mnist.DataSet(validation_classes, validation_classes, np.uint8)
+    train = mnist.DataSet(train_classes, validation_classes, np.uint8)
+    test = mnist.DataSet(test_classes, validation_classes, np.uint8)
+    return Datasets(train=train, validation=validation, test=test)
+
 class VAEModel():
     def __init__(self):
         self.data_directory = os.path.join(FLAGS.working_directory, "MNIST")
         if not os.path.exists(self.data_directory):
             os.makedirs(self.data_directory)
         self.save_path = FLAGS.working_directory + '/save.ckpt'
-        self.mnist = input_data.read_data_sets(self.data_directory, one_hot=True)
+        self.mnist = read_data_set("/tmp/vae/converted_java.npy")
 
         self.input_tensor = tf.placeholder(tf.float32, [FLAGS.batch_size, 28 * 28])
 
@@ -143,6 +169,7 @@ class VAEModel():
             pbar.start()
             for i in range(FLAGS.updates_per_epoch):
                 pbar.update(i)
+                print("Update %s" % i)
                 x, _ = self.mnist.train.next_batch(FLAGS.batch_size)
                 _, loss_value = sess.run([self.train, self.loss], {self.input_tensor: x})
                 training_loss += loss_value
